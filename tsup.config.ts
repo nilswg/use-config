@@ -19,6 +19,7 @@ export default defineConfig({
                 {
                     ...pkg,
                     private: undefined,
+                    main: undefined,
                     scripts: undefined,
                     devDependencies: undefined,
                     type: undefined,
