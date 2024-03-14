@@ -1,5 +1,37 @@
 # @nilswg/use-config
 
+
+
+## 🛫 快速開始
+
+```bash
+pnpm install
+pnpm run dev
+```
+
+
+## ⚔️ 測試
+
+```bash
+pnpm run test
+```
+
+
+## 🛠️ 建置
+
+```bash
+pnpm run build
+```
+
+
+## 🚀 發佈 
+
+```bash
+pnpm run publish
+```
+
+
+
 ## 使用範例
 
 在你當前的專案目錄下，創建一個專門用來放置 config 的目錄。如 ./configurations
