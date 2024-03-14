@@ -1,0 +1,6 @@
+{
+    "path-intellisense.mappings": {
+        "@lib": "${workspaceFolder}/lib",
+        "@/": "${workspaceFolder}/src",
+    },
+}
