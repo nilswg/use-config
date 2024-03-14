@@ -1,6 +1,6 @@
 # @nilswg/use-config
 
-
+Easy to use and manage your configurations
 
 ## 🛫 快速開始
 
