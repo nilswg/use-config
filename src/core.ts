@@ -9,19 +9,41 @@ import { strip } from "@luxass/strip-json-comments";
  */
 export function useConfig<TConfig>(options?: Partial<Options>) {
     const args = { ...defaultOptions, ...options };
-    const configName = ProcessVariable(args).get(args.configKey);
-    if (!configName) {
-        console.error(
-            [
-                logError("\n[nil-config] Config Process Variable Undefined.\n"),
-                logError(`  Please set `) +
-                    logWarn(`${args.flag}${args.configKey}${args.delimiter || " "}CONFIG_NAME`) +
-                    logError(` in process.argv.\n\n`),
-            ].join("\n")
-        );
-        throw new Error("Config Process Variable Undefined.");
-    }
-    return getConfig<TConfig>(getConfigFilePath(args.configDir, configName));
+    return getConfig<TConfig>(getConfigFilePath(getConfigDir(args.configDir), getConfigName(args)));
+}
+
+function getConfigName(args: Options) {
+    console.log("[getConfigName]", {
+        args,
+    });
+    const configName = args.configName || ProcessVariable(args).get(args.configKey);
+    if (!!configName) return configName;
+    
+    // else throw error
+    console.error(
+        [
+            logError("\n[nil-config] Config Name Undefined.\n"),
+            logError(`  Please set `) +
+                logWarn(`${args.flag}${args.configKey}${args.delimiter || " "}CONFIG_NAME`) +
+                logError(` in process.argv.\n\n`),
+        ].join("\n")
+    );
+    throw new Error("Config Name Undefined.");
+}
+
+function getConfigDir(configDir: string) {
+    if (fs.existsSync(configDir)) return configDir;
+    
+    // else throw error
+    console.error(
+        [
+            logError("\n[nil-config] Config Folder Not Found.\n"),
+            logError("  Please check error message below:\n"),
+            logError("    " + "wrong folder path: ") + logWarn(path.resolve(process.cwd(), configDir)) + "\n",
+            "  \n\n",
+        ].join("\n")
+    );
+    throw new Error("Config Folder Not Found.");
 }
 
 /**
@@ -35,6 +57,10 @@ export function ProcessVariable(
         flag: defaultOptions.flag,
     }
 ) {
+    if (typeof process === "undefined") {
+        return { get: () => undefined };
+    }
+
     const args = process.argv.slice(2);
     const result = args.reduce((acc, cur, i) => {
         if (cur.startsWith(options.flag)) {
@@ -43,7 +69,7 @@ export function ProcessVariable(
                 const value = args[i + 1];
                 acc[name] = value;
             } else {
-                const [name, value] = cur.replace(options.flag, "").split(options.delimiter);
+                const [name, value] = $pair(cur, options.flag, options.delimiter);
                 acc[name] = value;
             }
         }
@@ -69,6 +95,27 @@ export function ProcessVariable(
         },
     };
 }
+
+/**
+ * 解析 process.argv 中，arg 型式為 `[flag][key][delimiter][value]` 的字串
+ */
+const $pair = (argStr: string, flag: string, delimiter: string) => {
+    const pair = argStr.replace(flag, "").split(delimiter);
+    if (pair.length === 2) {
+        return pair;
+    }
+    
+    // else throw error
+    console.error(
+        [
+            logError("[nil-config] Invalid Process Variable.\n"),
+            logError("  Please check error message below:\n"),
+            logError("    " + "wrong pattern: ") + logWarn(argStr) + "\n",
+            "  \n\n",
+        ].join("\n")
+    );
+    throw new Error("Invalid Process Variable.");
+};
 
 /**
  * 取得 config 檔案
@@ -102,31 +149,21 @@ export const getConfig = <TConfig>(configFilePath: string) => {
  */
 export const getConfigFilePath = (configDir: string, configName: string) => {
     // 可能為 json 或是 jsonc
-    const configPath = path.resolve(process.cwd(), configDir, `config.${configName}.json`);
+    const configFilePath = path.resolve(process.cwd(), configDir, `config.${configName}.json`);
+    const res = [configFilePath, configFilePath + "c"].find((path) => fs.existsSync(path));
+    if (!!res) return res;
 
-    let res = "";
-    [configPath, configPath + "c"].some((path) => {
-        if (fs.existsSync(path)) {
-            res = path;
-            return true;
-        }
-    });
-    if (res) {
-        return res;
-    }
-
-    // 如果都沒有找到
+    // else throw error
     console.error(
         [
             logError("[nil-config] Config Files Not Found.\n"),
-            logError("  Please check config info below:\n"),
+            logError("  Please check error message below:\n"),
             logError("    " + "config variable: ") + logWarn(configName) + "\n",
             logError("    " + "folder path: ") + logWarn(path.resolve(process.cwd(), configDir)) + "\n",
             logError("    " + "allowed extension: ") + logWarn(".json") + logError(" or ") + logWarn(".jsonc") + "\n",
             "  \n\n",
         ].join("\n")
     );
-
     throw new Error("Config Files Not Found.");
 };
 
@@ -145,7 +182,10 @@ export type Options = {
     delimiter: string; // 分隔符號, ex: --test=123, = 就是 delimiter
     flag: string; // 標誌符號, ex: --test=123, -- 就是 flag
     configKey: string;
+    configName?: string;
 };
+
+const DefaultConfigName = "development";
 
 export type UseConfigOptions = Partial<Options>;
 
@@ -154,4 +194,5 @@ export const defaultOptions: Options = {
     flag: "--",
     delimiter: "",
     configKey: "config",
+    configName: DefaultConfigName,
 };

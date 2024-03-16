@@ -76,6 +76,18 @@ describe("Test ProcessVariable", () => {
         process.argv = ["node", "test.js", "--test", "123"];
         expect(ProcessVariable().get("not_exist")).toBeUndefined();
     });
+    it("錯誤的輸入，應拋出 Invalid Process Variable.", () => {
+        /**
+         * @example
+         * ```
+         *  node test.js --test-123
+         * ```
+         */
+        process.argv = ["node", "test.js", "--test=foo=bar"];
+        expect(() => {
+            ProcessVariable({ flag: "--", delimiter: "=" });
+        }).toThrow("Invalid Process Variable.");
+    });
 });
 
 describe("Test getConfigFilePath", () => {
@@ -123,39 +135,38 @@ describe("Test getConfig", () => {
 });
 
 describe("Test NilConfig", () => {
-    it("無對應的Config環境變數，應拋出 Config Process Variable Undefined.", () => {
+    it("錯誤的 configDir，應拋出錯誤 Config Folder Not Found.", () => {
+        process.argv = ["node", "test.js"];
         expect(() => {
-            useConfig();
-        }).toThrow("Config Process Variable Undefined.");
+            useConfig({ configDir: "./wrong-config-forder-path" });
+        }).toThrow("Config Folder Not Found.");
     });
-    it("錯誤的Config檔案名稱，應拋出錯誤 Config Files Not Found.", () => {
-        process.argv = ["node", "test.js", "--config", "config-notfound"];
+    it("未定義的 ConfigName，應拋出 Config Name Undefined.", () => {
+        process.argv = ["node", "test.js"];
         expect(() => {
-            useConfig();
+            useConfig({
+                configDir: existConfigDirPath,
+                configName: undefined,
+            });
+        }).toThrow("Config Name Undefined.");
+    });
+    it("錯誤的 ConfigName 導致查找 config 檔案失敗，應拋出錯誤 Config Files Not Found.", () => {
+        expect(() => {
+            useConfig({
+                configDir: existConfigDirPath,
+                configName: "wrongConfigName",
+            });
         }).toThrow("Config Files Not Found.");
     });
-    it("錯誤的Config目錄，應拋出錯誤 Config Files Not Found.", () => {
-        process.argv = ["node", "test.js", "--config", "test"];
-        expect(() => {
-            useConfig({ configDir: "./wrong-path" });
-        }).toThrow();
-    });
-    it("以正確的參數，使用 useConfig 應正確", () => {
-        process.argv = ["node", "test.js", "--config", "test"];
-        const config = useConfig({ configDir: path.resolve(process.cwd(), "./configurations") });
+    it("正確的 ConfigName，應正確取得 config 檔案", () => {
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            configName: existConfigName,
+        });
         expect(config).toBeTruthy();
-    });
-    it("以預設的參數，使用 useConfig 應正確", () => {
-        process.argv = ["node", "test.js", "--config", "test"];
-        const config = useConfig();
-        expect(config).toBeTruthy();
-    });
-    it("useConfig 取得 config 的內容應完全符合", () => {
-        process.argv = ["node", "test.js", "--config", "test"];
-        const config = useConfig<{ some_key: string }>();
-        expect(config).toEqual({ some_key: "some_value" });
     });
 });
 
+const existConfigName = "test";
 const existConfigDirPath = path.resolve(process.cwd(), "./configurations");
 const existConfigFilePath = path.resolve(process.cwd(), "./configurations", "config.test.jsonc");
