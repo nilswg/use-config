@@ -16,7 +16,7 @@ function getConfigName(args: Options) {
     console.log("[getConfigName]", {
         args,
     });
-    const configName = args.configName || ProcessVariable(args).get(args.configKey);
+    const configName = args.configName || ProcessVariable(args).get(args.configKey) || args.defaultConfigName;
     if (!!configName) return configName;
     
     // else throw error
@@ -182,10 +182,17 @@ export type Options = {
     delimiter: string; // 分隔符號, ex: --test=123, = 就是 delimiter
     flag: string; // 標誌符號, ex: --test=123, -- 就是 flag
     configKey: string;
-    configName?: string;
-};
 
-const DefaultConfigName = "development";
+    /**
+     * 直接指定 config 名稱
+     */
+    configName?: string;
+
+    /**
+     * 當無設置 configName 且 process.env 亦無法找到正確的名稱時，使用此最為預設值的 configName
+     */
+    defaultConfigName?: string;
+};
 
 export type UseConfigOptions = Partial<Options>;
 
@@ -194,5 +201,4 @@ export const defaultOptions: Options = {
     flag: "--",
     delimiter: "",
     configKey: "config",
-    configName: DefaultConfigName,
 };

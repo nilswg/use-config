@@ -135,20 +135,13 @@ describe("Test getConfig", () => {
 });
 
 describe("Test NilConfig", () => {
+    beforeEach(() => {
+        process.argv = ["node", "test.js"]; // 清空 process.argv
+    });
     it("錯誤的 configDir，應拋出錯誤 Config Folder Not Found.", () => {
-        process.argv = ["node", "test.js"];
         expect(() => {
             useConfig({ configDir: "./wrong-config-forder-path" });
         }).toThrow("Config Folder Not Found.");
-    });
-    it("未定義的 ConfigName，應拋出 Config Name Undefined.", () => {
-        process.argv = ["node", "test.js"];
-        expect(() => {
-            useConfig({
-                configDir: existConfigDirPath,
-                configName: undefined,
-            });
-        }).toThrow("Config Name Undefined.");
     });
     it("錯誤的 ConfigName 導致查找 config 檔案失敗，應拋出錯誤 Config Files Not Found.", () => {
         expect(() => {
@@ -164,6 +157,32 @@ describe("Test NilConfig", () => {
             configName: existConfigName,
         });
         expect(config).toBeTruthy();
+    });
+    it("未定義 configName 時，正確的 defaultConfigName，應正確取得 config 檔案", () => {
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            configName: undefined,
+            defaultConfigName: existConfigName,
+        });
+        expect(config).toBeTruthy();
+    });
+    it("未定義 configName 時，錯誤的 defaultConfigName，應拋出錯誤 Config Files Not Found.", () => {
+        expect(() => {
+            useConfig({
+                configDir: existConfigDirPath,
+                configName: undefined,
+                defaultConfigName: "wrongConfigName",
+            });
+        }).toThrow("Config Files Not Found.");
+    });
+    it("皆未定義 configName, defaultConfigName 時，應拋出 Config Name Undefined.", () => {
+        expect(() => {
+            useConfig({
+                configDir: existConfigDirPath,
+                configName: undefined,
+                defaultConfigName: undefined,
+            });
+        }).toThrow("Config Name Undefined.");
     });
 });
 
