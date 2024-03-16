@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ProcessVariable, defaultOptions, getConfig, getConfigPath, useConfig } from "@/core";
+import { ProcessVariable, defaultOptions, getConfig, getConfigFilePath, useConfig } from "@/core";
 
 beforeEach(() => {
     jest.spyOn(console, "log");
@@ -78,54 +78,46 @@ describe("Test ProcessVariable", () => {
     });
 });
 
-describe("Test getConfigPath", () => {
-    it("前置條件: ./configurations 應存在", () => {
-        const dir = path.resolve(process.cwd(), "./configurations");
-        expect(fs.existsSync(dir)).toBeTruthy();
+describe("Test getConfigFilePath", () => {
+    it("前置條件: existConfigDirPath 應存在", () => {
+        const isExist = fs.existsSync(existConfigDirPath);
+        expect(isExist).toBeTruthy();
     });
-    it("前置條件: ./configurations/config.test.jsonc 應存在", () => {
-        const dir = path.resolve(process.cwd(), "./configurations/config.test.jsonc");
-        expect(fs.existsSync(dir)).toBeTruthy();
+    it("前置條件: existConfigFilePath 應存在", () => {
+        const isExist = fs.existsSync(existConfigFilePath);
+        expect(isExist).toBeTruthy();
     });
-    it("使用 getConfigPath 取得 ./configurations/config.test.jsonc 位置，應存在", () => {
-        const configPath = getConfigPath(path.resolve(process.cwd(), "./configurations"), "test");
-        expect(configPath).toBeTruthy();
-    });
-    it("使用 getConfigPath 取得 ./configurations/config.test.jsonc 位置，應正確", () => {
-        const configPath = getConfigPath(path.resolve(process.cwd(), "./configurations"), "test");
-        const expected = path.resolve(process.cwd(), "./configurations", "config.test.jsonc");
-        expect(configPath).toBe(expected);
-    });
-    it("檢查該 config 檔案是否存在", () => {
-        const config = getConfig("test", { ...defaultOptions, configDir: "./configurations" });
-        expect(config).toBeTruthy();
+    it("使用 getConfigPath 取得的路徑資訊，應與 existConfigFilePath 一致", () => {
+        const result = getConfigFilePath("./configurations", "test");
+        expect(result).toBe(existConfigFilePath);
     });
 });
 
 describe("Test getConfig", () => {
     it("查無該 config 檔案時應拋出錯誤", () => {
         expect(() => {
-            getConfig("config-not-exist");
+            const notExistConfig = "";
+            getConfig(notExistConfig);
         }).toThrow();
     });
-    it("取得 config 檔案，應正確", () => {
-        const config = getConfig("test", { configDir: "./configurations" });
-        expect(config).toBeTruthy();
+    it("前置條件: configPath 應存在", () => {
+        const isExist = fs.existsSync(existConfigFilePath);
+        expect(isExist).toBeTruthy();
     });
-    it("使用預設的參數取得 config 檔案，應正確", () => {
-        const config = getConfig("test", { configDir: "./configurations" });
+    it("取得 config 檔案，應正確", () => {
+        const config = getConfig(existConfigFilePath);
         expect(config).toBeTruthy();
     });
     it("存在的 key 值應回傳 truthy", () => {
-        const config = getConfig<{ some_key: string }>("test");
+        const config = getConfig<{ some_key: string }>(existConfigFilePath);
         expect(config.some_key).toBeTruthy();
     });
     it("查無此 key 值時回傳 undefined", () => {
-        const config = getConfig<any>("test");
+        const config = getConfig<any>(existConfigFilePath);
         expect(config.err_key).toBeUndefined();
     });
     it("透過 key 取得正確值", () => {
-        const config = getConfig<{ some_key: string }>("test");
+        const config = getConfig<{ some_key: "some_value" }>(existConfigFilePath);
         expect(config.some_key).toEqual("some_value");
     });
 });
@@ -164,3 +156,6 @@ describe("Test NilConfig", () => {
         expect(config).toEqual({ some_key: "some_value" });
     });
 });
+
+const existConfigDirPath = path.resolve(process.cwd(), "./configurations");
+const existConfigFilePath = path.resolve(process.cwd(), "./configurations", "config.test.jsonc");

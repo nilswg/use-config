@@ -21,7 +21,7 @@ export function useConfig<TConfig>(options?: Partial<Options>) {
         );
         throw new Error("Config Process Variable Undefined.");
     }
-    return getConfig<TConfig>(configName, args);
+    return getConfig<TConfig>(getConfigFilePath(args.configDir, configName));
 }
 
 /**
@@ -89,13 +89,8 @@ export function ProcessVariable(
  * @param options 設定
  *
  */
-export const getConfig = <TConfig>(
-    configName: string,
-    args: Pick<Options, "configDir"> = {
-        configDir: defaultOptions.configDir,
-    }
-) => {
-    const configFile = fs.readFileSync(getConfigPath(args.configDir, configName), "utf-8");
+export const getConfig = <TConfig>(configFilePath: string) => {
+    const configFile = fs.readFileSync(configFilePath, "utf-8");
     return JSON.parse(strip(configFile)) as TConfig;
 };
 
@@ -105,7 +100,7 @@ export const getConfig = <TConfig>(
  * @param configName 根據環境變數來取得對應的 config 名稱
  * @returns
  */
-export const getConfigPath = (configDir: string, configName: string) => {
+export const getConfigFilePath = (configDir: string, configName: string) => {
     // 可能為 json 或是 jsonc
     const configPath = path.resolve(process.cwd(), configDir, `config.${configName}.json`);
 
