@@ -2,13 +2,14 @@
 
 Easy to use and manage your configurations
 
-## 🛫 快速開始
+
+
+## 🛫 開發
 
 ```bash
 pnpm install
 pnpm run dev
 ```
-
 
 ## ⚔️ 測試
 
@@ -16,13 +17,11 @@ pnpm run dev
 pnpm run test
 ```
 
-
 ## 🛠️ 建置
 
 ```bash
 pnpm run build
 ```
-
 
 ## 🚀 發佈 
 
@@ -50,8 +49,8 @@ pnpm run publish
 
 ```js
 
-node ./test.js --config prod
-                    //  ^ config variable: prod
+node ./test.js --config dev
+                    //  ^ config variable: dev
 
 ```
 
@@ -59,8 +58,8 @@ node ./test.js --config prod
 
 ```js
 
-const config = await useConfig({ configDir: "./configurations" });
-//    ^ config.prod.json
+const config = useConfig({ configDir: "./configurations" });
+//    ^ config.dev.json
 
 ```
 
@@ -71,8 +70,8 @@ const config = await useConfig({ configDir: "./configurations" });
 ```bash
 👌 
 
-config.foo.json 
-config.bar.jsonc
+config.dev.json 
+config.prod.jsonc
 ```
 
 但是，請不要取同樣的名稱，例如:
@@ -80,8 +79,8 @@ config.bar.jsonc
 ```bash
 💀 
 
-config.foo.json 
-config.foo.jsonc
+config.dev.json 
+config.dev.jsonc
 ```
 
 ## configKey
@@ -91,7 +90,48 @@ config.foo.jsonc
 ```js
 
 // ex: node ./test.js -c dev
-const config = await useConfig({ flag: '-', configKey: "c" });
-//                                                      ^ other config key
+const config = useConfig({ flag: '-', configKey: "c" });
+//                                ^ other flag    ^ other config key
+
+```
+
+
+## configName
+
+可直接指定 configName，因此，不會從環境中獲取。
+
+```js
+
+const config = useConfig({ configName: "dev" });
+
+```
+
+
+## 推薦的使用方式
+
+定義 defaultConfigName，並透過環境中獲取的 configName 來切換
+
+```js
+
+const config = useConfig({ defaultConfigName: "dev" });
+
+```
+
+如此一來，預設情況下，沒有從環境中獲取時，他也會將 config.dev.json 作為默認的情況。
+
+例如，配合你在 package.json 中的設置。
+
+```json
+//@file: ./package.json
+
+{
+  "scripts" : {
+    "dev": "astro dev",
+    "build:local": "astro build",
+    "build:staging" : "astro build -- -c staging",
+    "build:production" : "astro build -- -c production",
+    //                                ^ 使用 -- 隔開
+  }
+}
 
 ```

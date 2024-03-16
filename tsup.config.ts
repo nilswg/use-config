@@ -30,9 +30,8 @@ export default defineConfig({
                 2
             )
         );
-        fs.writeFileSync(
-            "dist/README.md",
-            fs.readFileSync("README.md", "utf-8")
-        );
+        const readme = fs.readFileSync("README.md", "utf-8").split("\n\n\n");
+        // 間隔 \n\n\n 取一段，發佈時忽略建置環境的相關步驟說明
+        fs.writeFileSync("dist/README.md", readme.filter((_, i) => i !== 1).join("\n\n\n"));
     },
 });

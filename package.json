@@ -1,8 +1,8 @@
 {
-  "name": "nil-useconfig",
+  "name": "@nilswg/use-config",
   "type": "commonjs",
   "main": "./src/index.ts",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "exports": {
     ".": {
       "types": "./index.d.ts",
