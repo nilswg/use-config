@@ -18,7 +18,7 @@ function getConfigName(args: Options) {
     });
     const configName = args.configName || ProcessVariable(args).get(args.configKey) || args.defaultConfigName;
     if (!!configName) return configName;
-    
+
     // else throw error
     console.error(
         [
@@ -33,7 +33,7 @@ function getConfigName(args: Options) {
 
 function getConfigDir(configDir: string) {
     if (fs.existsSync(configDir)) return configDir;
-    
+
     // else throw error
     console.error(
         [
@@ -46,12 +46,33 @@ function getConfigDir(configDir: string) {
     throw new Error("Config Folder Not Found.");
 }
 
+let instance: ReturnType<typeof _ProcessVariable> | null = null;
+let instanceOptions: Parameters<typeof _ProcessVariable>[0] | null = null;
+
 /**
  * 讀取 process.argv 中的變數
  * @param variableName
  * @returns
  */
 export function ProcessVariable(
+    options: Pick<Options, "delimiter" | "flag"> = {
+        delimiter: defaultOptions.delimiter,
+        flag: defaultOptions.flag,
+    }
+) {
+    if (!instance || instanceOptions !== options) {
+        instanceOptions = options;
+        instance = _ProcessVariable(options);
+    }
+    return instance;
+}
+
+/**
+ * 讀取 process.argv 中的變數
+ * @param variableName
+ * @returns
+ */
+function _ProcessVariable(
     options: Pick<Options, "delimiter" | "flag"> = {
         delimiter: defaultOptions.delimiter,
         flag: defaultOptions.flag,
@@ -104,7 +125,7 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
     if (pair.length === 2) {
         return pair;
     }
-    
+
     // else throw error
     console.error(
         [
@@ -195,7 +216,6 @@ export type Options = {
 };
 
 export type UseConfigOptions = Partial<Options>;
-
 export const defaultOptions: Options = {
     configDir: "./configurations",
     flag: "--",
