@@ -12,6 +12,9 @@ export default defineConfig({
     splitting: true,
     sourcemap: true,
     treeshake: true,
+    esbuildOptions(options) {
+        options.drop = ['console', 'debugger'];
+    },
     onSuccess: async () => {
         fs.writeFileSync(
             "dist/package.json",

@@ -13,9 +13,6 @@ export function useConfig<TConfig>(options?: Partial<Options>) {
 }
 
 function getConfigName(args: Options) {
-    console.log("[getConfigName]", {
-        args,
-    });
     const configName = args.configName || ProcessVariable(args).get(args.configKey) || args.defaultConfigName;
     if (!!configName) return configName;
 
