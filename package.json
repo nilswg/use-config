@@ -11,10 +11,10 @@
     }
   },
   "scripts": {
-    "dev": "tsup ./src/index.ts --watch",
+    "dev": "tsup ./src/index.ts --watch --onSuccess \"node dist/index.js -e development\"",
     "start": "node dist/index.js -e production",
     "test": "jest",
-    "build": "tsup ./src/index.ts",
+    "build": "tsup --env.NODE_ENV production ./src/index.ts",
     "publish": "cd dist && npm publish"
   },
   "devDependencies": {
@@ -22,10 +22,10 @@
     "@types/node": "^20.10.6",
     "jest": "^27",
     "ts-jest": "^27",
-    "tsup": "^8.0.1",
-    "typescript": "5.3.3"
+    "tsup": "^8.0.1"
   },
   "dependencies": {
+    "typescript": ">=4.0.0",
     "@luxass/strip-json-comments": "^1.2.0"
   },
   "description": "Easy to use and manage your configurations",

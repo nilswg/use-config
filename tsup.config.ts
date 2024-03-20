@@ -2,6 +2,9 @@ import { defineConfig } from "tsup";
 import fs from "fs";
 import pkg from "./package.json";
 
+const args = process.argv.slice(2);
+const isProd = args.some((arg, i) => arg === "--env.NODE_ENV" && args[i + 1] === "production");
+
 export default defineConfig({
     clean: true,
     dts: true,
@@ -13,7 +16,9 @@ export default defineConfig({
     sourcemap: true,
     treeshake: true,
     esbuildOptions(options) {
-        options.drop = ['console', 'debugger'];
+        if (isProd) {
+            options.drop = ["console", "debugger"];
+        }
     },
     onSuccess: async () => {
         fs.writeFileSync(

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { strip } from "@luxass/strip-json-comments";
+import ts from "typescript";
 
 /**
  * 使用 config
@@ -156,7 +157,7 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
  */
 export const getConfig = <TConfig>(configFilePath: string) => {
     const configFile = fs.readFileSync(configFilePath, "utf-8");
-    return JSON.parse(strip(configFile)) as TConfig;
+    return JSON.parse(strip(parseCodeToConfig(configFile))) as TConfig;
 };
 
 /**
@@ -211,6 +212,43 @@ export type Options = {
      */
     defaultConfigName?: string;
 };
+
+/**
+ * 請完成一個函式，讓無論是 commonjs、esm、ts 皆能正確讀取該 config 檔案
+ *
+ * @example
+ * ```
+ * module.exports.Config = {
+ *     delimiter: "--",
+ *     flag: "-",
+ * };
+ * ```
+ *
+ * ```
+ * export const Config = {
+ *    delimiter: "--",
+ *    flag: "-",
+ * }
+ * ```
+ */
+function parseCodeToConfig(code: string) {
+    const result = ts.transpileModule(code, {
+        compilerOptions: {
+            module: ts.ModuleKind.ESNext,
+            target: ts.ScriptTarget.ESNext,
+        },
+    });
+
+    if (result.outputText.includes("module.exports")) {
+        return result.outputText.split("module.exports")[1].split("=")[1].trim().replace(";", "");
+    }
+
+    if (result.outputText.includes("export")) {
+        return result.outputText.split("export")[1].split("=")[1].trim().replace(";", "");
+    }
+
+    return code;
+}
 
 export type UseConfigOptions = Partial<Options>;
 export const defaultOptions: Options = {
