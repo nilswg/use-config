@@ -157,7 +157,7 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
  */
 export const getConfig = <TConfig>(configFilePath: string) => {
     const configFile = fs.readFileSync(configFilePath, "utf-8");
-    return JSON.parse(strip(parseCodeToConfig(configFile))) as TConfig;
+    return parseCodeToConfig(configFile) as TConfig;
 };
 
 /**
@@ -167,10 +167,10 @@ export const getConfig = <TConfig>(configFilePath: string) => {
  * @returns
  */
 export const getConfigFilePath = (configDir: string, configName: string) => {
-    // 可能為 json 或是 jsonc
-    const configFilePath = path.resolve(process.cwd(), configDir, `config.${configName}.json`);
-    const res = [configFilePath, configFilePath + "c"].find((path) => fs.existsSync(path));
-    if (!!res) return res;
+    for (const ext of [".json", ".jsonc", ".ts", ".js", ".mjs", ".cjs"]) {
+        const res = path.resolve(process.cwd(), configDir, `config.${configName}`) + ext;
+        if (fs.existsSync(res)) return res;
+    }
 
     // else throw error
     console.error(
@@ -231,24 +231,48 @@ export type Options = {
  * }
  * ```
  */
-function parseCodeToConfig(code: string) {
-    const result = ts.transpileModule(code, {
-        compilerOptions: {
-            module: ts.ModuleKind.ESNext,
-            target: ts.ScriptTarget.ESNext,
-        },
-    });
+export const parseCodeToConfig = (code: string) => {
+    let res = code;
+    try {
+        const result = ts.transpileModule(code, {
+            compilerOptions: {
+                module: ts.ModuleKind.ESNext,
+                target: ts.ScriptTarget.ESNext,
+            },
+        });
+        // 檢查是否為 module 例如: .ts, .js, .mjs, .cjs
+        for (const keyword of ["module.exports", "export "]) {
+            if (result.outputText.includes(keyword)) {
+                res = result.outputText.split(keyword)[1].split("=")[1].trim().replace(";", "");
+                res = ts.parseJsonText('config', stringify(res)).text;
 
-    if (result.outputText.includes("module.exports")) {
-        return result.outputText.split("module.exports")[1].split("=")[1].trim().replace(";", "");
+                // res 去除最後多餘的逗號
+                res= res.replace(/,(?=[^,]*$)/, '');
+
+                res = JSON.parse(strip(res))
+                return res;
+            }
+        }
+        // 一般的 json, jsonc 檔案
+        return JSON.parse(strip(code));
+    } catch (error) {
+        // 轉換過程中發生錯誤，代表該 config 檔案不符合規範
+        console.log(
+            [
+                logError("[nil-config] Invalid Config File.\n"),
+                logError("  Please check error message below:\n"),
+                logError("    " + "wrong code:\n\n     ") + res + "\n",
+                "  \n\n",
+            ].join("\n")
+        );
+        throw new Error("Invalid Config File.");
     }
+};
 
-    if (result.outputText.includes("export")) {
-        return result.outputText.split("export")[1].split("=")[1].trim().replace(";", "");
-    }
-
-    return code;
-}
+// 幫物件字串的 key 加上雙引號
+export const stringify = (objStr: string) => {
+    return objStr.replace(/([a-zA-Z0-9_]+)(:)/g, '"$1"$2');
+};
 
 export type UseConfigOptions = Partial<Options>;
 export const defaultOptions: Options = {

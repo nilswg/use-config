@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ProcessVariable, defaultOptions, getConfig, getConfigFilePath, useConfig } from "@/core";
+import { ProcessVariable, defaultOptions, getConfig, getConfigFilePath, useConfig, parseCodeToConfig } from "@/core";
 
 beforeEach(() => {
     jest.spyOn(console, "log");
@@ -103,6 +103,10 @@ describe("Test getConfigFilePath", () => {
         const result = getConfigFilePath("./configurations", "test");
         expect(result).toBe(existConfigFilePath);
     });
+    it("應能取得 .ts 的 config 檔案路徑", () => {
+        const result = getConfigFilePath("./configurations", "tsc");
+        expect(fs.existsSync(result)).toBeTruthy();
+    });
 });
 
 describe("Test getConfig", () => {
@@ -131,6 +135,126 @@ describe("Test getConfig", () => {
     it("透過 key 取得正確值", () => {
         const config = getConfig<{ some_key: "some_value" }>(existConfigFilePath);
         expect(config.some_key).toEqual("some_value");
+    });
+    it("應能取得 .ts 的 config 檔案", () => {
+        const config = getConfig<{ some_key: "some_value" }>(getConfigFilePath("./configurations", "tsc"));
+        expect(config).toBeTruthy();
+    });
+});
+
+describe("Test parseCodeToConfig", () => {
+    it("ESM named export，應回傳正確", () => {
+        const code = `export const Config = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toBeTruthy();
+    });
+    it("ESM named export，應取得正確 config", () => {
+        const code = `export const Config = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("ESM named export，有註解下，應取得正確 config", () => {
+        const code = `export const Config = {
+            // 這是一個註解 🤗
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("ESM default export，應回傳正確", () => {
+        const code = `export default const Config = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toBeTruthy();
+    });
+    it("ESM default export，應取得正確 config", () => {
+        const code = `export default const Config = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("ESM default export，應取得正確 config", () => {
+        const code = `export default const Config = {
+            // 這是一個註解 🤗
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("CJS named export，應回傳正確", () => {
+        const code = `module.exports.config = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toBeTruthy();
+    });
+    it("CJS named export，應取得正確 config", () => {
+        const code = `module.exports.config = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("CJS named export，應取得正確 config", () => {
+        const code = `module.exports.config = {
+            // 這是一個註解 🤗
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("CJS default export，應回傳正確", () => {
+        const code = `module.exports = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toBeTruthy();
+    });
+    it("CJS default export，應取得正確 config", () => {
+        const code = `module.exports = {
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("CJS default export，應取得正確 config", () => {
+        const code = `module.exports = {
+            // 這是一個註解 🤗
+            "some_key": "some_value"
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("轉換過程中發生錯誤，代表該 config 檔案不符合規範，應拋出錯誤", () => {
+        const errCode = `module.exports = 
+            // 這是一個註解 🤗
+            "some_key": "some_value"
+        };
+        `;
+        expect(() => {
+            parseCodeToConfig(errCode);
+        }).toThrow("Invalid Config File.");
     });
 });
 
@@ -183,6 +307,13 @@ describe("Test NilConfig", () => {
                 defaultConfigName: undefined,
             });
         }).toThrow("Config Name Undefined.");
+    });
+    it("應可讀取 .ts 檔案作為 config 檔案", () => {
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            configName: "tsc",
+        });
+        expect(config).toEqual({ some_key: "some_value" });
     });
 });
 
