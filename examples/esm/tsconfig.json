@@ -24,8 +24,7 @@
   },
   "ts-node": {
     "transpileOnly": true,
-    "esm": true, // 指定 ts-node 用 esm 執行, 也可用 --esm 在 cmd 下指令
-    "experimentalSpecifierResolution": "node"
+    "experimentalSpecifierResolution": "node",
   },
   "include": ["./**/*"],
   "exclude": ["node_modules/**/*", "dist/**/*"]

@@ -243,13 +243,20 @@ export const parseCodeToConfig = (code: string) => {
         // 檢查是否為 module 例如: .ts, .js, .mjs, .cjs
         for (const keyword of ["module.exports", "export "]) {
             if (result.outputText.includes(keyword)) {
-                res = result.outputText.split(keyword)[1].split("=")[1].trim().replace(";", "");
-                res = ts.parseJsonText('config', stringify(res)).text;
+                // 取得物件字串，他是取 '= {' 或 'default = {' 到 '}' 之間的字串
+                res = result.outputText.match(/[default|=]\s+?({[\s\S]+?})/)?.[1] || "";
 
-                // res 去除最後多餘的逗號
-                res= res.replace(/,(?=[^,]*$)/, '');
+                // 去除註解
+                res = strip(res);
 
-                res = JSON.parse(strip(res))
+                // 幫物件字串的 key 加上雙引號
+                res = res.replace(/([a-zA-Z0-9_]+)(:)/g, '"$1"$2');
+
+                // 去除最後多餘的逗號
+                res = res.replace(/,(?=[^,]*$)/, "");
+
+                // res = ts.parseJsonText("config", res).text;
+                res = JSON.parse(res);
                 return res;
             }
         }
@@ -267,11 +274,6 @@ export const parseCodeToConfig = (code: string) => {
         );
         throw new Error("Invalid Config File.");
     }
-};
-
-// 幫物件字串的 key 加上雙引號
-export const stringify = (objStr: string) => {
-    return objStr.replace(/([a-zA-Z0-9_]+)(:)/g, '"$1"$2');
 };
 
 export type UseConfigOptions = Partial<Options>;

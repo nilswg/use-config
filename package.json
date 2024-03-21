@@ -2,7 +2,7 @@
   "name": "@nilswg/use-config",
   "type": "commonjs",
   "main": "./src/index.ts",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "exports": {
     ".": {
       "types": "./index.d.ts",

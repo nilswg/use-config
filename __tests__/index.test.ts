@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { ProcessVariable, defaultOptions, getConfig, getConfigFilePath, useConfig, parseCodeToConfig } from "@/core";
+import { forEachChild } from "typescript";
 
 beforeEach(() => {
     jest.spyOn(console, "log");
@@ -143,17 +144,9 @@ describe("Test getConfig", () => {
 });
 
 describe("Test parseCodeToConfig", () => {
-    it("ESM named export，應回傳正確", () => {
-        const code = `export const Config = {
-            "some_key": "some_value"
-        };
-        `;
-        const config = parseCodeToConfig(code);
-        expect(config).toBeTruthy();
-    });
     it("ESM named export，應取得正確 config", () => {
         const code = `export const Config = {
-            "some_key": "some_value"
+            some_key: "some_value",
         };
         `;
         const config = parseCodeToConfig(code);
@@ -162,50 +155,35 @@ describe("Test parseCodeToConfig", () => {
     it("ESM named export，有註解下，應取得正確 config", () => {
         const code = `export const Config = {
             // 這是一個註解 🤗
-            "some_key": "some_value"
+            some_key: "some_value",
         };
         `;
         const config = parseCodeToConfig(code);
         expect(config).toEqual({ some_key: "some_value" });
     });
 
-    it("ESM default export，應回傳正確", () => {
-        const code = `export default const Config = {
-            "some_key": "some_value"
-        };
-        `;
-        const config = parseCodeToConfig(code);
-        expect(config).toBeTruthy();
-    });
     it("ESM default export，應取得正確 config", () => {
-        const code = `export default const Config = {
-            "some_key": "some_value"
-        };
-        `;
-        const config = parseCodeToConfig(code);
-        expect(config).toEqual({ some_key: "some_value" });
-    });
-    it("ESM default export，應取得正確 config", () => {
-        const code = `export default const Config = {
+        const code = `export default {
             // 這是一個註解 🤗
-            "some_key": "some_value"
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("ESM default export，應取得正確 config", () => {
+        const code = `export default {
+            // 這是一個註解 🤗
+            some_key: "some_value",
         };
         `;
         const config = parseCodeToConfig(code);
         expect(config).toEqual({ some_key: "some_value" });
     });
 
-    it("CJS named export，應回傳正確", () => {
-        const code = `module.exports.config = {
-            "some_key": "some_value"
-        };
-        `;
-        const config = parseCodeToConfig(code);
-        expect(config).toBeTruthy();
-    });
     it("CJS named export，應取得正確 config", () => {
         const code = `module.exports.config = {
-            "some_key": "some_value"
+            some_key: "some_value",
         };
         `;
         const config = parseCodeToConfig(code);
@@ -214,24 +192,16 @@ describe("Test parseCodeToConfig", () => {
     it("CJS named export，應取得正確 config", () => {
         const code = `module.exports.config = {
             // 這是一個註解 🤗
-            "some_key": "some_value"
+            some_key: "some_value",
         };
         `;
         const config = parseCodeToConfig(code);
         expect(config).toEqual({ some_key: "some_value" });
     });
 
-    it("CJS default export，應回傳正確", () => {
-        const code = `module.exports = {
-            "some_key": "some_value"
-        };
-        `;
-        const config = parseCodeToConfig(code);
-        expect(config).toBeTruthy();
-    });
     it("CJS default export，應取得正確 config", () => {
         const code = `module.exports = {
-            "some_key": "some_value"
+            some_key: "some_value",
         };
         `;
         const config = parseCodeToConfig(code);
@@ -240,14 +210,15 @@ describe("Test parseCodeToConfig", () => {
     it("CJS default export，應取得正確 config", () => {
         const code = `module.exports = {
             // 這是一個註解 🤗
-            "some_key": "some_value"
+            some_key: "some_value",
         };
         `;
         const config = parseCodeToConfig(code);
         expect(config).toEqual({ some_key: "some_value" });
     });
+
     it("轉換過程中發生錯誤，代表該 config 檔案不符合規範，應拋出錯誤", () => {
-        const errCode = `module.exports = 
+        const errCode = `module.exports =
             // 這是一個註解 🤗
             "some_key": "some_value"
         };
@@ -312,6 +283,27 @@ describe("Test NilConfig", () => {
         const config = useConfig({
             configDir: existConfigDirPath,
             configName: "tsc",
+        });
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("環境變數讀取 tsc, 應可讀取 .ts 檔案作為 config 檔案", () => {
+        process.argv = ["node", "test.js", "-c=tsc"];
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            delimiter: "=",
+        });
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    test.each(["ex1", "ex2", "ex3", "ex4", "ex5"])("讀取 %s 的 config 檔案", (configName) => {
+        // process.argv = ["node", "test.js", "-c", configName];
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            configName
         });
         expect(config).toEqual({ some_key: "some_value" });
     });
