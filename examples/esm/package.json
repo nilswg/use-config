@@ -4,7 +4,7 @@
   "main": "./index.ts",
   "version": "0.0.1",
   "scripts": {
-    "dev": "nodemon -e ts,js --exec ts-node -r tsconfig-paths/register ./index.ts --config dev",
+    "dev": "nodemon -e ts,js --exec node --no-warnings --loader ts-node/esm -r tsconfig-paths/register ./index.ts",
     "build": "rm -rf dist && tsc && tsc-alias"
   },
   "devDependencies": {

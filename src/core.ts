@@ -1,9 +1,18 @@
 import fs from "fs";
 import path from "path";
 import { strip } from "@luxass/strip-json-comments";
+import ts from "typescript";
 
 /**
  * 使用 config
+ *
+ * @example
+ * ```
+ *
+ * node ./main.js $c=tsc
+ *
+ * ```
+ *
  * @param options
  * @returns
  */
@@ -17,7 +26,7 @@ function getConfigName(args: Options) {
     if (!!configName) return configName;
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("\n[nil-config] Config Name Undefined.\n"),
             logError(`  Please set `) +
@@ -25,14 +34,13 @@ function getConfigName(args: Options) {
                 logError(` in process.argv.\n\n`),
         ].join("\n")
     );
-    throw new Error("Config Name Undefined.");
 }
 
 function getConfigDir(configDir: string) {
     if (fs.existsSync(configDir)) return configDir;
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("\n[nil-config] Config Folder Not Found.\n"),
             logError("  Please check error message below:\n"),
@@ -40,7 +48,6 @@ function getConfigDir(configDir: string) {
             "  \n\n",
         ].join("\n")
     );
-    throw new Error("Config Folder Not Found.");
 }
 
 let instance: ReturnType<typeof _ProcessVariable> | null = null;
@@ -124,7 +131,7 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
     }
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("[nil-config] Invalid Process Variable.\n"),
             logError("  Please check error message below:\n"),
@@ -132,7 +139,6 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
             "  \n\n",
         ].join("\n")
     );
-    throw new Error("Invalid Process Variable.");
 };
 
 /**
@@ -156,7 +162,7 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
  */
 export const getConfig = <TConfig>(configFilePath: string) => {
     const configFile = fs.readFileSync(configFilePath, "utf-8");
-    return JSON.parse(strip(configFile)) as TConfig;
+    return parseCodeToConfig(configFile) as TConfig;
 };
 
 /**
@@ -166,13 +172,13 @@ export const getConfig = <TConfig>(configFilePath: string) => {
  * @returns
  */
 export const getConfigFilePath = (configDir: string, configName: string) => {
-    // 可能為 json 或是 jsonc
-    const configFilePath = path.resolve(process.cwd(), configDir, `config.${configName}.json`);
-    const res = [configFilePath, configFilePath + "c"].find((path) => fs.existsSync(path));
-    if (!!res) return res;
+    for (const ext of [".json", ".jsonc", ".ts", ".js", ".mjs", ".cjs"]) {
+        const res = path.resolve(process.cwd(), configDir, `config.${configName}`) + ext;
+        if (fs.existsSync(res)) return res;
+    }
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("[nil-config] Config Files Not Found.\n"),
             logError("  Please check error message below:\n"),
@@ -182,7 +188,6 @@ export const getConfigFilePath = (configDir: string, configName: string) => {
             "  \n\n",
         ].join("\n")
     );
-    throw new Error("Config Files Not Found.");
 };
 
 /**
@@ -212,10 +217,94 @@ export type Options = {
     defaultConfigName?: string;
 };
 
+/**
+ * 請完成一個函式，讓無論是 commonjs、esm、ts 皆能正確讀取該 config 檔案
+ *
+ * @example
+ * ```
+ * module.exports.Config = {
+ *     delimiter: "--",
+ *     flag: "-",
+ * };
+ * ```
+ *
+ * ```
+ * export const Config = {
+ *    delimiter: "--",
+ *    flag: "-",
+ * }
+ * ```
+ */
+export const parseCodeToConfig = (code: string) => {
+    let res = code;
+    try {
+        const result = ts.transpileModule(code, {
+            compilerOptions: {
+                module: ts.ModuleKind.ESNext,
+                target: ts.ScriptTarget.ESNext,
+            },
+        });
+        // 檢查是否為 module 例如: .ts, .js, .mjs, .cjs
+        for (const keyword of ["module.exports", "export "]) {
+            if (result.outputText.includes(keyword)) {
+                // 取得物件字串，他是取 '= {' 或 'default = {' 到 '}' 之間的字串
+                res = result.outputText.match(/[default|=]\s+?({[\s\S]+?})/)?.[1] || "";
+
+                // 必須在去除 // 的註解之前，先使用跳脫字元，來保護 http 的雙斜線
+                res = res.replace(PROTOCAL_RE, "$1:\\/\\/");
+
+                // 去除註解
+                res = strip(res, { trailingCommas: true, whitespace: true });
+
+                // 移除所有換行
+                res = res.split("\n").map(x=>x.trim()).join("");
+
+                // 幫物件字串的 key 加上雙引號
+                console.log('in', { res })
+                res = res.replace(/([a-zA-Z0-9_\-\.\/\@]+)(:)[\'|\"|\s+]/g, '"$1"$2');
+                // res = res.replace(/([a-zA-Z0-9_\-\.\/\@]+):\s*[\'|\"]([^\,|\}]*)/g, (m, p1, p2)=>{
+                //     return `"${p1}":"${p2}"`
+                // });
+
+                // res = res.replace(/[\'|\"]\"([\,|\}])/g, '"$1')
+                // console.log('out',{ res })
+
+                // 將單引號轉換為雙引號 (會將有用跳脫字元保護的單引號轉換成特殊代號)
+                res = res
+                    .replace(/\\\'/g, "@@SINGLE_QUOTE@@")
+                    .replace(/\'/g, '"')
+                    .replace(/@@SINGLE_QUOTE@@/g, "'");
+
+                // 去除 res 中 Bad escaped character
+                res = res.replace(/\\\'/g, "'");
+
+                res = JSON.parse(res);
+                return res;
+            }
+        }
+        // 一般的 json, jsonc 檔案
+        return JSON.parse(strip(code));
+    } catch (error) {
+        // 轉換過程中發生錯誤，代表該 config 檔案不符合規範
+        throw new Error(
+            [
+                logError("[nil-config] Invalid Config File.\n"),
+                logError("  Please check error message below:\n"),
+                error instanceof Object && "message" in error ? logError(error.message + "") : "",
+                logError("  Your config file:\n"),
+                logError(res),
+                "  \n\n",
+            ].join("\n")
+        );
+    }
+};
+
 export type UseConfigOptions = Partial<Options>;
 export const defaultOptions: Options = {
     configDir: "./configurations",
-    flag: "--",
-    delimiter: "",
-    configKey: "config",
+    flag: "$",
+    configKey: "c",
+    delimiter: "=",
 };
+
+const PROTOCAL_RE = /(https?|ftps?|sftp|file|mailto|news|nntp|ldap|ldaps|telnet|ssh|irc|ircs|git):\/\//g

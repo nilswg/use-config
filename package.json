@@ -2,7 +2,7 @@
   "name": "@nilswg/use-config",
   "type": "commonjs",
   "main": "./src/index.ts",
-  "version": "0.0.5",
+  "version": "0.1.2",
   "exports": {
     ".": {
       "types": "./index.d.ts",
@@ -10,23 +10,28 @@
       "require": "./index.js"
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nilswg/use-config.git"
+  },
   "scripts": {
-    "dev": "tsup ./src/index.ts --watch",
+    "dev": "tsup ./src/index.ts --watch --onSuccess \"node dist/index.js -e development\"",
     "start": "node dist/index.js -e production",
     "test": "jest",
-    "build": "tsup ./src/index.ts",
+    "build": "tsup --env.NODE_ENV production ./src/index.ts",
     "publish": "cd dist && npm publish"
   },
   "devDependencies": {
-    "@types/jest": "^29.0.0",
+    "@swc/core": "^1.4.8",
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.10.6",
-    "jest": "^27",
-    "ts-jest": "^27",
-    "tsup": "^8.0.1",
-    "typescript": "5.3.3"
+    "jest": "^29.7.0",
+    "tsup": "^8.0.1"
   },
   "dependencies": {
-    "@luxass/strip-json-comments": "^1.2.0"
+    "@luxass/strip-json-comments": "^1.2.0",
+    "typescript": ">=4.0.0"
   },
   "description": "Easy to use and manage your configurations",
   "directories": {

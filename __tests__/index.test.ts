@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ProcessVariable, defaultOptions, getConfig, getConfigFilePath, useConfig } from "@/core";
+import { ProcessVariable, getConfig, getConfigFilePath, useConfig, parseCodeToConfig } from "@/core";
 
 beforeEach(() => {
     jest.spyOn(console, "log");
@@ -103,6 +103,10 @@ describe("Test getConfigFilePath", () => {
         const result = getConfigFilePath("./configurations", "test");
         expect(result).toBe(existConfigFilePath);
     });
+    it("應能取得 .ts 的 config 檔案路徑", () => {
+        const result = getConfigFilePath("./configurations", "tsc");
+        expect(fs.existsSync(result)).toBeTruthy();
+    });
 });
 
 describe("Test getConfig", () => {
@@ -131,6 +135,96 @@ describe("Test getConfig", () => {
     it("透過 key 取得正確值", () => {
         const config = getConfig<{ some_key: "some_value" }>(existConfigFilePath);
         expect(config.some_key).toEqual("some_value");
+    });
+    it("應能取得 .ts 的 config 檔案", () => {
+        const config = getConfig<{ some_key: "some_value" }>(getConfigFilePath("./configurations", "tsc"));
+        expect(config).toBeTruthy();
+    });
+});
+
+describe("Test parseCodeToConfig", () => {
+    it("ESM named export，應取得正確 config", () => {
+        const code = `export const Config = {
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("ESM named export，有註解下，應取得正確 config", () => {
+        const code = `export const Config = {
+            // 這是一個註解 🤗
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("ESM default export，應取得正確 config", () => {
+        const code = `export default {
+            // 這是一個註解 🤗
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("ESM default export，應取得正確 config", () => {
+        const code = `export default {
+            // 這是一個註解 🤗
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("CJS named export，應取得正確 config", () => {
+        const code = `module.exports.config = {
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("CJS named export，應取得正確 config", () => {
+        const code = `module.exports.config = {
+            // 這是一個註解 🤗
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("CJS default export，應取得正確 config", () => {
+        const code = `module.exports = {
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("CJS default export，應取得正確 config", () => {
+        const code = `module.exports = {
+            // 這是一個註解 🤗
+            some_key: "some_value",
+        };
+        `;
+        const config = parseCodeToConfig(code);
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("轉換過程中發生錯誤，代表該 config 檔案不符合規範，應拋出錯誤", () => {
+        const errCode = `module.exports =
+            // 這是一個註解 🤗
+            "some_key": "some_value"
+        };
+        `;
+        expect(() => {
+            parseCodeToConfig(errCode);
+        }).toThrow("Invalid Config File.");
     });
 });
 
@@ -183,6 +277,73 @@ describe("Test NilConfig", () => {
                 defaultConfigName: undefined,
             });
         }).toThrow("Config Name Undefined.");
+    });
+    it("應可讀取 .ts 檔案作為 config 檔案", () => {
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            configName: "tsc",
+        });
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+    it("環境變數讀取 tsc, 應可讀取 .ts 檔案作為 config 檔案", () => {
+        process.argv = ["node", "test.js", "-c=tsc"];
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            delimiter: "=",
+        });
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    test.each(["ex1", "ex2", "ex3", "ex4", "ex5"])("讀取 %s 的 config 檔案", (configName) => {
+        // process.argv = ["node", "test.js", "-c", configName];
+        const config = useConfig({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            configName,
+        });
+        expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("讀取含有網址的 config 檔案", () => {
+        const config = useConfig<{ EMAIL_URL: String; WEBSITE_URL: string; LOCAL_URL: string }>({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            configName: "ex6",
+        });
+        expect(config["EMAIL_URL"]).toEqual("xxxxxx-xxxxxxx@aaaaaaaa.iam.gserviceaccount.com");
+        expect(config["WEBSITE_URL"]).toEqual("https://aaaaaaaa-default-setting.abcd.com/");
+        expect(config["LOCAL_URL"]).toEqual("http://localhost:5000");
+    });
+
+    it("讀取使用單引號的 config 檔案", () => {
+        const config = useConfig<{ first_key: string; second_key: string; third_key: string; forth_key: string }>({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            configName: "ex7",
+        });
+        expect(config).toBeTruthy();
+        expect(config["first_key"]).toEqual("some_value");
+        expect(config["second_key"]).toEqual("some_value");
+        expect(config["third_key"]).toEqual("some_value");
+        expect(config["forth_key"]).toEqual("\"some_value'''");
+    });
+
+    it("值含有使用單引號，卻沒有使用跳脫字元保護時，應拋出錯誤", () => {
+        const run = () => {
+            const config = useConfig<{ some_key: string }>({
+                configDir: existConfigDirPath,
+                flag: "-",
+                configKey: "c",
+                configName: "ex8",
+            });
+        };
+
+        expect(run).toThrow("Invalid Config File.");
     });
 });
 
