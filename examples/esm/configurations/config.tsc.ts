@@ -1,4 +1,3 @@
-export const Config = {
-    // 這是一個註解 🤗
+export default {
     some_key: "some_value",
 };

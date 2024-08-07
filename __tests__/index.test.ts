@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ProcessVariable, defaultOptions, getConfig, getConfigFilePath, useConfig, parseCodeToConfig } from "@/core";
-import { forEachChild } from "typescript";
+import { ProcessVariable, getConfig, getConfigFilePath, useConfig, parseCodeToConfig } from "@/core";
 
 beforeEach(() => {
     jest.spyOn(console, "log");
@@ -303,9 +302,48 @@ describe("Test NilConfig", () => {
             configDir: existConfigDirPath,
             flag: "-",
             configKey: "c",
-            configName
+            configName,
         });
         expect(config).toEqual({ some_key: "some_value" });
+    });
+
+    it("讀取含有網址的 config 檔案", () => {
+        const config = useConfig<{ EMAIL_URL: String; WEBSITE_URL: string; LOCAL_URL: string }>({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            configName: "ex6",
+        });
+        expect(config["EMAIL_URL"]).toEqual("xxxxxx-xxxxxxx@aaaaaaaa.iam.gserviceaccount.com");
+        expect(config["WEBSITE_URL"]).toEqual("https://aaaaaaaa-default-setting.abcd.com/");
+        expect(config["LOCAL_URL"]).toEqual("http://localhost:5000");
+    });
+
+    it("讀取使用單引號的 config 檔案", () => {
+        const config = useConfig<{ first_key: string; second_key: string; third_key: string; forth_key: string }>({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            configName: "ex7",
+        });
+        expect(config).toBeTruthy();
+        expect(config["first_key"]).toEqual("some_value");
+        expect(config["second_key"]).toEqual("some_value");
+        expect(config["third_key"]).toEqual("some_value");
+        expect(config["forth_key"]).toEqual("\"some_value'''");
+    });
+
+    it("值含有使用單引號，卻沒有使用跳脫字元保護時，應拋出錯誤", () => {
+        const run = () => {
+            const config = useConfig<{ some_key: string }>({
+                configDir: existConfigDirPath,
+                flag: "-",
+                configKey: "c",
+                configName: "ex8",
+            });
+        };
+
+        expect(run).toThrow("Invalid Config File.");
     });
 });
 

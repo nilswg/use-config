@@ -5,6 +5,14 @@ import ts from "typescript";
 
 /**
  * 使用 config
+ *
+ * @example
+ * ```
+ *
+ * node ./main.js $c=tsc
+ *
+ * ```
+ *
  * @param options
  * @returns
  */
@@ -18,7 +26,7 @@ function getConfigName(args: Options) {
     if (!!configName) return configName;
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("\n[nil-config] Config Name Undefined.\n"),
             logError(`  Please set `) +
@@ -26,14 +34,13 @@ function getConfigName(args: Options) {
                 logError(` in process.argv.\n\n`),
         ].join("\n")
     );
-    throw new Error("Config Name Undefined.");
 }
 
 function getConfigDir(configDir: string) {
     if (fs.existsSync(configDir)) return configDir;
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("\n[nil-config] Config Folder Not Found.\n"),
             logError("  Please check error message below:\n"),
@@ -41,7 +48,6 @@ function getConfigDir(configDir: string) {
             "  \n\n",
         ].join("\n")
     );
-    throw new Error("Config Folder Not Found.");
 }
 
 let instance: ReturnType<typeof _ProcessVariable> | null = null;
@@ -125,7 +131,7 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
     }
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("[nil-config] Invalid Process Variable.\n"),
             logError("  Please check error message below:\n"),
@@ -133,7 +139,6 @@ const $pair = (argStr: string, flag: string, delimiter: string) => {
             "  \n\n",
         ].join("\n")
     );
-    throw new Error("Invalid Process Variable.");
 };
 
 /**
@@ -173,7 +178,7 @@ export const getConfigFilePath = (configDir: string, configName: string) => {
     }
 
     // else throw error
-    console.error(
+    throw new Error(
         [
             logError("[nil-config] Config Files Not Found.\n"),
             logError("  Please check error message below:\n"),
@@ -183,7 +188,6 @@ export const getConfigFilePath = (configDir: string, configName: string) => {
             "  \n\n",
         ].join("\n")
     );
-    throw new Error("Config Files Not Found.");
 };
 
 /**
@@ -246,16 +250,34 @@ export const parseCodeToConfig = (code: string) => {
                 // 取得物件字串，他是取 '= {' 或 'default = {' 到 '}' 之間的字串
                 res = result.outputText.match(/[default|=]\s+?({[\s\S]+?})/)?.[1] || "";
 
+                // 必須在去除 // 的註解之前，先使用跳脫字元，來保護 http 的雙斜線
+                res = res.replace(PROTOCAL_RE, "$1:\\/\\/");
+
                 // 去除註解
-                res = strip(res);
+                res = strip(res, { trailingCommas: true, whitespace: true });
+
+                // 移除所有換行
+                res = res.split("\n").map(x=>x.trim()).join("");
 
                 // 幫物件字串的 key 加上雙引號
-                res = res.replace(/([a-zA-Z0-9_]+)(:)/g, '"$1"$2');
+                console.log('in', { res })
+                res = res.replace(/([a-zA-Z0-9_\-\.\/\@]+)(:)[\'|\"|\s+]/g, '"$1"$2');
+                // res = res.replace(/([a-zA-Z0-9_\-\.\/\@]+):\s*[\'|\"]([^\,|\}]*)/g, (m, p1, p2)=>{
+                //     return `"${p1}":"${p2}"`
+                // });
 
-                // 去除最後多餘的逗號
-                res = res.replace(/,(?=[^,]*$)/, "");
+                // res = res.replace(/[\'|\"]\"([\,|\}])/g, '"$1')
+                // console.log('out',{ res })
 
-                // res = ts.parseJsonText("config", res).text;
+                // 將單引號轉換為雙引號 (會將有用跳脫字元保護的單引號轉換成特殊代號)
+                res = res
+                    .replace(/\\\'/g, "@@SINGLE_QUOTE@@")
+                    .replace(/\'/g, '"')
+                    .replace(/@@SINGLE_QUOTE@@/g, "'");
+
+                // 去除 res 中 Bad escaped character
+                res = res.replace(/\\\'/g, "'");
+
                 res = JSON.parse(res);
                 return res;
             }
@@ -264,22 +286,25 @@ export const parseCodeToConfig = (code: string) => {
         return JSON.parse(strip(code));
     } catch (error) {
         // 轉換過程中發生錯誤，代表該 config 檔案不符合規範
-        console.log(
+        throw new Error(
             [
                 logError("[nil-config] Invalid Config File.\n"),
                 logError("  Please check error message below:\n"),
-                logError("    " + "wrong code:\n\n     ") + res + "\n",
+                error instanceof Object && "message" in error ? logError(error.message + "") : "",
+                logError("  Your config file:\n"),
+                logError(res),
                 "  \n\n",
             ].join("\n")
         );
-        throw new Error("Invalid Config File.");
     }
 };
 
 export type UseConfigOptions = Partial<Options>;
 export const defaultOptions: Options = {
     configDir: "./configurations",
-    flag: "--",
-    delimiter: "",
-    configKey: "config",
+    flag: "$",
+    configKey: "c",
+    delimiter: "=",
 };
+
+const PROTOCAL_RE = /(https?|ftps?|sftp|file|mailto|news|nntp|ldap|ldaps|telnet|ssh|irc|ircs|git):\/\//g

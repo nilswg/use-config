@@ -2,13 +2,17 @@
   "name": "@nilswg/use-config",
   "type": "commonjs",
   "main": "./src/index.ts",
-  "version": "0.0.7",
+  "version": "0.1.2",
   "exports": {
     ".": {
       "types": "./index.d.ts",
       "import": "./index.mjs",
       "require": "./index.js"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nilswg/use-config.git"
   },
   "scripts": {
     "dev": "tsup ./src/index.ts --watch --onSuccess \"node dist/index.js -e development\"",

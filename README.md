@@ -23,7 +23,7 @@ pnpm run test
 pnpm run build
 ```
 
-## 🚀 發佈 
+## 🚀 發佈
 
 ```bash
 pnpm run publish
@@ -39,7 +39,7 @@ pnpm run publish
 ./YOUR_PROJECT
    v configurations (在你的專案下創建)
      - config.dev.jsonc
-     - config.prod.jsonc 
+     - config.prod.jsonc
    v src
      - ...
    - package.json
@@ -65,40 +65,39 @@ const config = useConfig({ configDir: "./configurations" });
 
 ## config 的類型
 
-目前可以同時兼容 json、jsonc 兩種，例如:
+目前可以支援 json、jsonc、ts 的 config 文件類型，例如:
 
 ```bash
-👌 
 
-config.dev.json 
-config.prod.jsonc
+config.dev.json
+config.stage.jsonc
+config.prod.ts
 ```
 
-但是，請不要取同樣的名稱，例如:
+但是 config 的名稱不可以重複，例如:
 
 ```bash
-💀 
+# 💀 下方重複定義的名稱為 dev 的 config
 
-config.dev.json 
+config.dev.json
 config.dev.jsonc
 ```
 
 ## configKey
 
-你如果也使用了 `--config` ，你可以調整為其他的
+有些情況 `--config` 可能已經被使用。這時你可以設置 `flag` `configKey` `delimiter` 來避免衝突，例如:
 
 ```js
 
-// ex: node ./test.js -c dev
-const config = useConfig({ flag: '-', configKey: "c" });
-//                                ^ other flag    ^ other config key
+// ✅ node ./test.js $c=dev
+const config = useConfig({ flag: '$', configKey: "c", delimiter: "=" });
 
 ```
 
 
 ## configName
 
-可直接指定 configName，因此，不會從環境中獲取。
+當然，你也可直接指定 `configName`，而不是從環境變數中獲取。
 
 ```js
 
@@ -109,7 +108,7 @@ const config = useConfig({ configName: "dev" });
 
 ## 推薦的使用方式
 
-定義 defaultConfigName，並透過環境中獲取的 configName 來切換
+當你需要在不同情況下，也能對應上一個預設的 config 文件，你可以設置 `defaultConfigName`。
 
 ```js
 
@@ -117,9 +116,7 @@ const config = useConfig({ defaultConfigName: "dev" });
 
 ```
 
-如此一來，預設情況下，沒有從環境中獲取時，他也會將 config.dev.json 作為默認的情況。
-
-例如，配合你在 package.json 中的設置。
+如此一來，預設情況下，沒有從環境中獲取時，他也會將 config.dev.json 作為預選配置。例如:
 
 ```json
 //@file: ./package.json
