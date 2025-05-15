@@ -251,7 +251,7 @@ export const parseCodeToConfig = (code: string) => {
                 res = result.outputText.match(/[default|=]\s+?({[\s\S]+?})/)?.[1] || "";
 
                 // 必須在去除 // 的註解之前，先使用跳脫字元，來保護 http 的雙斜線
-                res = res.replace(PROTOCAL_RE, "$1:\\/\\/");
+                res = res.replace(/\b([a-zA-Z][a-zA-Z0-9+\-.]*):\/\//g, "$1:\\/\\/");
 
                 // 去除註解
                 res = strip(res, { trailingCommas: true, whitespace: true });
@@ -260,14 +260,7 @@ export const parseCodeToConfig = (code: string) => {
                 res = res.split("\n").map(x=>x.trim()).join("");
 
                 // 幫物件字串的 key 加上雙引號
-                console.log('in', { res })
                 res = res.replace(/([a-zA-Z0-9_\-\.\/\@]+)(:)[\'|\"|\s+]/g, '"$1"$2');
-                // res = res.replace(/([a-zA-Z0-9_\-\.\/\@]+):\s*[\'|\"]([^\,|\}]*)/g, (m, p1, p2)=>{
-                //     return `"${p1}":"${p2}"`
-                // });
-
-                // res = res.replace(/[\'|\"]\"([\,|\}])/g, '"$1')
-                // console.log('out',{ res })
 
                 // 將單引號轉換為雙引號 (會將有用跳脫字元保護的單引號轉換成特殊代號)
                 res = res
@@ -306,5 +299,3 @@ export const defaultOptions: Options = {
     configKey: "c",
     delimiter: "=",
 };
-
-const PROTOCAL_RE = /(https?|ftps?|sftp|file|mailto|news|nntp|ldap|ldaps|telnet|ssh|irc|ircs|git):\/\//g

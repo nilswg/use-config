@@ -345,6 +345,20 @@ describe("Test NilConfig", () => {
 
         expect(run).toThrow("Invalid Config File.");
     });
+
+    it("範例 DATABASE_URL", () => {
+        const config = useConfig<{ DATABASE_URL_1: string, DATABASE_URL_2: string, DATABASE_URL_3: string, DATABASE_URL_4: string }>({
+            configDir: existConfigDirPath,
+            flag: "-",
+            configKey: "c",
+            configName: "ex9",
+        });
+
+        expect(config.DATABASE_URL_1).toStrictEqual("postgresql://postgres:passWord=@localhost:54322/wmox-postgres")
+        expect(config.DATABASE_URL_2).toStrictEqual("postgresql://postgres:passWord=@localhost:54322/wmox-postgres")
+        expect(config.DATABASE_URL_3).toStrictEqual("postgres://postgres:passWord=@localhost:54322/wmox-postgres")
+        expect(config.DATABASE_URL_4).toStrictEqual("postgres://postgres:passWord=@localhost:54322/wmox-postgres")
+    })
 });
 
 const existConfigName = "test";
